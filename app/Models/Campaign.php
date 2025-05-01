@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Mail\CampaignStatusUpdate;
+use Illuminate\Support\Facades\Mail;
 
 class Campaign extends Model
 {
@@ -21,6 +23,8 @@ class Campaign extends Model
         'status',
         'category',
         'image_url',
+        'approved_by',
+        'rejection_reason'
     ];
 
     protected $casts = [
@@ -35,9 +39,55 @@ class Campaign extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
     public function donations()
     {
         return $this->hasMany(Donation::class);
+    }
+
+    public function approve(User $approver, ?string $reason = null)
+    {
+        $this->update([
+            'status' => 'approved',
+            'approved_by' => $approver->id,
+            'rejection_reason' => null
+        ]);
+
+        Mail::to($this->user)->send(new CampaignStatusUpdate($this));
+
+        return $this;
+    }
+
+    public function reject(User $approver, string $reason)
+    {
+        $this->update([
+            'status' => 'rejected',
+            'approved_by' => $approver->id,
+            'rejection_reason' => $reason
+        ]);
+
+        Mail::to($this->user)->send(new CampaignStatusUpdate($this));
+
+        return $this;
+    }
+
+    public function isPending()
+    {
+        return $this->status === 'pending';
+    }
+
+    public function isApproved()
+    {
+        return $this->status === 'approved';
+    }
+
+    public function isRejected()
+    {
+        return $this->status === 'rejected';
     }
 
     public function getProgressPercentageAttribute()

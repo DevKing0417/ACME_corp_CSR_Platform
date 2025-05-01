@@ -20,6 +20,9 @@ return new class extends Migration
             $table->string('status')->default('active');
             $table->string('category');
             $table->string('image_url')->nullable();
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
+            $table->text('rejection_reason')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

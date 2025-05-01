@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Mail\DonationConfirmation;
+use Illuminate\Support\Facades\Mail;
 
 class Donation extends Model
 {
@@ -48,5 +50,16 @@ class Donation extends Model
     public function getFormattedAmountAttribute()
     {
         return number_format($this->amount, 2);
+    }
+
+    protected static function booted()
+    {
+        static::created(function ($donation) {
+            // Send confirmation email
+            Mail::to($donation->user)->send(new DonationConfirmation($donation));
+
+            // Update campaign current amount
+            $donation->campaign->increment('current_amount', $donation->amount);
+        });
     }
 } 
